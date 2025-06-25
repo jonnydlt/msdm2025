@@ -1,0 +1,107 @@
+---
+title: "conjoint"
+output: html_document
+date: "2025-06-25"
+---
+```{r}
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(broom)
+```
+
+```{r}
+# Load cleaned conjoint Excel and normalize column names
+raw <- read_excel("C:/Users/jnthn/Desktop/msdm 2025/conjoint.xlsx") %>%
+  clean_names()  # ensures columns like Q9 _1 become q9_1
+```
+
+```{r}
+# Programmatically define snake_case conjoint columns q9_1–q17_3
+conjoint_columns <- paste0(
+  "q", rep(9:17, each = 3), "_", rep(1:3, times = 9)
+)
+```
+
+```{r}
+# Transform: numeric conversion, pivot, recode, clamp
+conjoint <- raw %>%
+  mutate(
+    across(all_of(conjoint_columns), as.numeric),
+    response_id = row_number()
+  ) %>%
+  select(response_id, all_of(conjoint_columns)) %>%
+  pivot_longer(
+    cols = -response_id,
+    names_to = "profile_tier",
+    values_to = "rating_raw"
+  ) %>%
+  mutate(
+    rating = as.numeric(rating_raw),
+    # Recode any 12–17 down by 10 (12->2, etc.)
+    rating = case_when(
+      rating >= 12 & rating <= 17 ~ rating - 10,
+      TRUE ~ rating
+    ),
+    # Clamp to 1–10
+    rating = if_else(rating < 1 | rating > 10, NA_real_, rating),
+    # Extract profile and tier codes without \d
+    profile = str_extract(profile_tier, "q[0-9]+"),
+    tier_code = str_remove(profile_tier, "^q[0-9]+_"),
+    # Map to prices
+    price = case_when(
+      profile %in% c("q9","q10","q11") ~ 6.99,
+      profile %in% c("q12","q13","q14") ~ 12.99,
+      profile %in% c("q15","q16","q17") ~ 18.99,
+      TRUE ~ NA_real_
+    ),
+    # Assign tier labels
+    tier = case_when(
+      tier_code == "1" ~ "Ad",
+      tier_code == "2" ~ "Standard",
+      tier_code == "3" ~ "Premium",
+      TRUE ~ NA_character_
+    )
+  )
+```
+
+```{r}
+# 1) Average Rating by Tier
+plot1 <- conjoint %>%
+  group_by(tier) %>%
+  summarise(avg_rating = mean(rating, na.rm = TRUE)) %>%
+  ggplot(aes(x = tier, y = avg_rating, fill = tier)) +
+  geom_col(width = 0.6) +
+  labs(
+    title = "Average Rating by Netflix Tier",
+    x = "Tier",
+    y = "Average Rating (1–10)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+ggsave("average_rating_by_tier.png", plot1, width = 6, height = 4)
+plot1
+```
+
+```{r}
+# 2) Price Sensitivity by Tier
+plot2 <- ggplot(conjoint, aes(x = price, y = rating, color = tier)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    title = "Price Sensitivity by Tier",
+    x = "Price ($)",
+    y = "Rating"
+  ) +
+  theme_minimal()
+
+ggsave("price_sensitivity.png", plot2, width = 6, height = 4)
+plot2
+```
+
+```{r}
+# 3) Linear Model & Part-Worths
+model <- lm(rating ~ tier + price, data = conjoint)
+print(summary(model))
+```

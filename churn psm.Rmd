@@ -1,0 +1,58 @@
+---
+title: "churn psm"
+output: html_document
+date: "2025-06-25"
+---
+```{r}
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(scales)
+```
+
+```{r}
+churn_psm_data <- read_excel("C:/Users/jnthn/Desktop/msdm 2025/churn psm.xlsx")
+list.files()
+churn_psm_data <- read_excel("C:/Users/jnthn/Desktop/msdm 2025/churn psm.xlsx")
+head(churn_psm_data)
+colnames(churn_psm_data)
+churn_psm_data <- churn_psm_data %>%
+  rename(
+    too_cheap = Q8_1,
+    good_deal = Q8_2,
+    getting_expensive = Q8_3,
+    too_expensive = Q8_4
+  )
+```
+
+```{r}
+churn_psm_long <- churn_psm_data %>%
+  pivot_longer(cols = everything(), names_to = "perception", values_to = "price")
+# Create step function data
+churn_psm_plot_data <- churn_psm_long %>%
+  group_by(perception) %>%
+  arrange(price) %>%
+  mutate(cumulative = if_else(
+    perception %in% c("too_cheap", "too_expensive"),
+    row_number() / n(),                   # Increasing for "too" perceptions
+    1 - (row_number() / n())              # Decreasing for "good" and "getting_expensive"
+  ))
+ggplot(churn_psm_plot_data, aes(x = price, y = cumulative, color = perception)) +
+  geom_line(size = 1.2) +
+  scale_color_manual(values = c(
+    "too_cheap" = "blue",
+    "good_deal" = "lightblue",
+    "getting_expensive" = "green",
+    "too_expensive" = "red"
+  )) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +  # Y-axis as %
+  labs(
+    title = "Van Westendorp Price Sensitivity Meter",
+    x = "Price ($)",
+    y = "% of Customers",
+    color = "Perception"
+  ) +
+  theme_minimal(base_size = 14)
+```

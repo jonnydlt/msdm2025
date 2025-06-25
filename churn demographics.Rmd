@@ -1,0 +1,111 @@
+---
+title: "churn dem"
+output: html_document
+date: "2025-06-25"
+---
+```{r}
+library(readxl)
+library(ggplot2)
+library(dplyr)
+```
+
+```{r}
+# Load Data
+churn_demographics <- read_excel("churn dem.xlsx")
+```
+
+```{r}
+# Reorder Q18 levels for consistent plotting
+churn_demographics <- churn_demographics %>%
+  mutate(Q18 = factor(Q18, levels = c(
+    "Extremely likely",
+    "Somewhat likely",
+    "Likely",
+    "Neutral",
+    "Not at all likely",
+    "Unlikely",
+    "Very unlikely"
+  )))
+
+# Plot with ordered levels
+ggplot(churn_demographics, aes(x = Q18)) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "Subscription Likelihood Distribution",
+       x = "Likelihood to Subscribe",
+       y = "Count") +
+  theme_minimal()
+
+```
+
+```{r}
+# Age Group Distribution (Q19)
+ggplot(churn_demographics, aes(x = Q19)) +
+  geom_bar(fill = "coral") +
+  labs(title = "Age Group Distribution", x = "Age Group", y = "Count") +
+  theme_minimal()
+```
+
+```{r}
+# Gender Distribution (Q20)
+ggplot(churn_demographics, aes(x = Q20)) +
+  geom_bar(fill = "seagreen") +
+  labs(title = "Gender Distribution", x = "Gender", y = "Count") +
+  theme_minimal()
+```
+
+```{r}
+# Recode and order Income Levels
+churn_demographics <- churn_demographics %>%
+  mutate(Q21 = case_when(
+    Q21 == "Less than $25,000" ~ "Less than $25,000",
+    Q21 == "$25,001 - $50,000" ~ "$25,001 - $50,000",
+    Q21 == "$50,001 - $75,000" ~ "$50,001 - $75,000",
+    Q21 == "$75,001 - $100,000" ~ "$75,001 - $100,000",
+    Q21 == "Over $100,001" ~ "Over $100,000",
+    TRUE ~ Q21  # Keep as-is for anything unexpected
+  ))
+
+# Set factor order
+churn_demographics <- churn_demographics %>%
+  mutate(Q21 = factor(Q21, levels = c(
+    "Less than $25,000",
+    "$25,001 - $50,000",
+    "$50,001 - $75,000",
+    "$75,001 - $100,000",
+    "Over $100,000"
+  )))
+
+# Income Distribution Chart
+ggplot(churn_demographics, aes(x = Q21)) +
+  geom_bar(fill = "darkorange") +
+  labs(title = "Income Range Distribution", x = "Income Range", y = "Count") +
+  theme_minimal()
+
+```
+
+```{r}
+# Recode and order Expertise Levels
+churn_demographics <- churn_demographics %>%
+  mutate(Q22 = case_when(
+    Q22 == "Expert" ~ "Expert",
+    Q22 == "Very" ~ "Very",
+    Q22 == "Somewhat" ~ "Somewhat",
+    Q22 == "Not at all" ~ "Not at all",
+    TRUE ~ Q22  # Keeps unexpected values for review
+  ))
+
+# Set factor order
+churn_demographics <- churn_demographics %>%
+  mutate(Q22 = factor(Q22, levels = c(
+    "Expert", "Very", "Somewhat", "Not at all"
+  )))
+
+# Confidence/Expertise Chart
+ggplot(churn_demographics, aes(x = Q22)) +
+  geom_bar(fill = "purple") +
+  labs(title = "Self-Reported Expertise",
+       x = "Expertise Level",
+       y = "Count") +
+  theme_minimal()
+
+```

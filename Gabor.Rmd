@@ -1,0 +1,48 @@
+---
+title: "gabor"
+output: html_document
+date: "2025-06-25"
+---
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+# Load the Gabor sheet using full file path
+gabor_data <- read_excel("C:\\Users\\jnthn\\Desktop\\msdm 2025\\gabor.xlsx")
+```
+
+```{r}
+# Define price labels
+price_points <- c(Q7a = 31, Q7b = 29, Q7c = 25, Q7d = 21, Q7e = 17, Q7f = 13)
+```
+
+```{r}
+# Calculate purchase probabilities
+purchase_probs <- sapply(names(price_points), function(q) {
+  mean(tolower(gabor_data[[q]]) == "yes", na.rm = TRUE) * 100
+})
+```
+
+```{r}
+# Create data frame
+gabor_df <- data.frame(
+  Price = price_points,
+  Purchase_Probability = as.numeric(purchase_probs)
+) %>% arrange(Price)
+```
+
+```{r}
+# Plot with orange color
+ggplot(gabor_df, aes(x = Price, y = Purchase_Probability)) +
+  geom_line(color = "orange") +
+  geom_point(size = 3, color = "orange") +
+  labs(
+    title = "Gabor Granger: Purchase Probability by Price Point",
+    x = "Price ($)",
+    y = "Purchase Probability (%)"
+  ) +
+  theme_minimal()
+```
